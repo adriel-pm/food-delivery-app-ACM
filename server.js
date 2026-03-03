@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 app.use(express.json()); // This allows the app to read "JSON" messages
+app.use(express.static('public'));
 
 // --- THE DATA LAYER (Fake Database) ---
 let orders = [];
