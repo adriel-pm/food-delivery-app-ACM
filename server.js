@@ -2,12 +2,34 @@ const express = require('express');
 const app = express();
 app.use(express.json()); // This allows the app to read "JSON" messages
 
-// --- THE DATA LAYER (Your Fake Database) ---
+// --- THE DATA LAYER (Fake Database) ---
 let orders = [];
+let users = [];
+
+// 1. Registration (Functional Requirement) 
+app.post('/register', (req, res) => {
+    const { email, password, role } = req.body; // roles: 'customer' or 'driver'
+    const newUser = { id: users.length + 1, email, password, role };
+    
+    users.push(newUser);
+    res.status(201).json({ message: "User Registered!", userId: newUser.id });
+});
+
+// 2. Login (Functional Requirement) 
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const user = users.find(u => u.email === email && u.password === password);
+    
+    if (user) {
+        res.json({ message: "Login Successful!", role: user.role });
+    } else {
+        res.status(401).send("Invalid email or password.");
+    }
+});
 
 // --- THE LOGIC LAYER (Core Functionalities) ---
 
-// 1. Viewing Cars (In your case, viewing Menus)
+// 1. Viewing Menu
 app.get('/menu', (req, res) => {
     const menu = [
         { id: 1, name: "Cheeseburger", price: 10 },
@@ -16,7 +38,7 @@ app.get('/menu', (req, res) => {
     res.json(menu);
 });
 
-// 2. Booking (Placing an Order)
+// 2. Placing an Order
 app.post('/order', (req, res) => {
     const { customerId, itemId } = req.body;
     
