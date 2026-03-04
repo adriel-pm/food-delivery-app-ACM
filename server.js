@@ -1,103 +1,58 @@
 const express = require('express');
 const app = express();
-app.use(express.json()); // This allows the app to read "JSON" messages
-app.use(express.static('public'));
+app.use(express.json());
+app.use(express.static('public')); // Serves your HTML file
 
-// --- THE DATA LAYER (Fake Database) ---
-let orders = [];
 let users = [];
+let orders = [];
 
-// 1. Registration (Functional Requirement) 
+// 1. Authentication (Register & Login)
 app.post('/register', (req, res) => {
-    const { email, password, role } = req.body; // roles: 'customer' or 'driver'
-    const newUser = { id: users.length + 1, email, password, role };
-    
-    users.push(newUser);
-    res.status(201).json({ message: "User Registered!", userId: newUser.id });
+    const { email, password, role } = req.body;
+    users.push({ email, password, role });
+    res.status(201).json({ message: "Account Created!", role });
 });
 
-// 2. Login (Functional Requirement) 
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     const user = users.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-        res.json({ message: "Login Successful!", role: user.role });
-    } else {
-        res.status(401).send("Invalid email or password.");
-    }
+    if (user) res.json({ message: "Login Successful!", role: user.role });
+    else res.status(401).json({ message: "Invalid credentials" });
 });
 
-// --- THE LOGIC LAYER (Core Functionalities) ---
-
-// 1. Viewing Menu
+// 2. Menu Retrieval
 app.get('/menu', (req, res) => {
-    const menu = [
-        { id: 1, name: "Cheeseburger", price: 10 },
-        { id: 2, name: "Pepperoni Pizza", price: 15 }
-    ];
-    res.json(menu);
+    res.json([
+        { id: 1, name: "Cheeseburger", price: 12 },
+        { id: 2, name: "Pepperoni Pizza", price: 15 },
+        { id: 3, name: "Spicy Wings", price: 10 }
+    ]);
 });
 
-// 2. Placing an Order
+// 3. Automated Ordering Sequence
 app.post('/order', (req, res) => {
-    const { customerId, itemId } = req.body;
-    
-    // This generates a Unique Order ID
-    const newOrder = {
-        orderId: `ORDER-${Math.floor(Math.random() * 9999)}`,
-        customerId: customerId,
-        status: "Preparing", //
-        time: new Date()
-    };
-    
-    orders.push(newOrder);
-    res.status(201).json(newOrder);
-});
-
-// 3. Update Order Status (Tracking Logic)
-app.patch('/order/:id/status', (req, res) => {
-    const { status } = req.body; // e.g., "ready", "picked up", or "delivered"
-    const order = orders.find(o => o.orderId === req.params.id);
-    
-    if (order) {
-        order.status = status;
-        res.json({ message: `Order updated to ${status}`, order });
-    } else {
-        res.status(404).send("Order ID not found.");
-    }
-});
-
-// 4. Order lifecycle
-app.post('/order', (req, res) => {
-    const { customerId, itemId } = req.body;
+    const { itemId } = req.body;
     const orderId = Math.floor(Math.random() * 10000);
-    const newOrder = { orderId, customerId, itemId, status: "preparing" };
+    const newOrder = { orderId, itemId, status: "Preparing" };
     orders.push(newOrder);
 
-    // Helper to get a random time between 5s and 15s (in milliseconds)
-    const randomTime = () => Math.floor(Math.random() * (15000 - 5000 + 1)) + 5000;
+    // Automation: Random timers between 4 to 8 seconds per stage for a better demo feel
+    const time = () => Math.floor(Math.random() * 4000) + 4000;
+    setTimeout(() => { 
+        newOrder.status = "Ready"; 
+        setTimeout(() => { 
+            newOrder.status = "Picked up"; 
+            setTimeout(() => { newOrder.status = "Delivered"; }, time());
+        }, time());
+    }, time());
 
-    // --- THE AUTOMATION SEQUENCE ---
-    setTimeout(() => {
-        newOrder.status = "ready";
-        console.log(`Order ${orderId}: READY`);
-
-        setTimeout(() => {
-            newOrder.status = "picked up";
-            console.log(`Order ${orderId}: PICKED UP`);
-
-            setTimeout(() => {
-                newOrder.status = "delivered";
-                console.log(`Order ${orderId}: DELIVERED`);
-            }, randomTime());
-        }, randomTime());
-    }, randomTime());
-
-    res.status(201).json({ 
-        message: "Order placed! It will advance through stages automatically.", 
-        orderId: orderId 
-    });
+    res.status(201).json({ message: "Order Placed!", orderId });
 });
 
-app.listen(3000, () => console.log("Food Delivery App is ALIVE on port 3000!"));
+// 4. Live Tracking Endpoint
+app.get('/order/:id', (req, res) => {
+    const order = orders.find(o => o.orderId === parseInt(req.params.id));
+    order ? res.json(order) : res.status(404).json({ message: "Not found" });
+});
+
+app.listen(3000, () => console.log("Food Delivery App on Port 3000"));
