@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Food Delivery App</title>
+    <title>Syracuse Food Delivery</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
         .box { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: 0 auto 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
@@ -43,6 +43,8 @@
     <script>
         let currentOrderId = null;
         let trackingInterval = null;
+        // NEW: This gives the app a memory so it doesn't spam notifications
+        let lastKnownStatus = "preparing"; 
 
         // Show a temporary popup message
         function showPopup(msg) {
@@ -52,7 +54,6 @@
             setTimeout(() => popup.classList.add('hidden'), 3000);
         }
 
-        // Handles both Login and Registration
         async function authenticate(route) {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -68,13 +69,12 @@
             if (res.ok) {
                 showPopup(data.message);
                 document.getElementById('authBox').classList.add('hidden');
-                loadMenu(); // Move to next screen
+                loadMenu(); 
             } else {
                 showPopup("Error: " + data.message);
             }
         }
 
-        // Fetches menu and builds clickable items
         async function loadMenu() {
             document.getElementById('menuBox').classList.remove('hidden');
             const res = await fetch('/menu');
@@ -91,7 +91,6 @@
             });
         }
 
-        // Submits the order and starts the tracking screen
         async function placeOrder(itemId) {
             const res = await fetch('/order', {
                 method: 'POST',
@@ -105,28 +104,37 @@
             document.getElementById('trackBox').classList.remove('hidden');
             document.getElementById('displayOrderId').innerText = data.orderId;
             
+            // Reset the memory and UI for a brand new order
             currentOrderId = data.orderId;
-            // Ask the server for an update every 2 seconds
+            lastKnownStatus = "preparing"; 
+            document.getElementById('trackerStatus').innerText = "PREPARING";
+            
             trackingInterval = setInterval(checkStatus, 2000); 
         }
 
-        // Asks the Logic Layer for the current status
         async function checkStatus() {
             const res = await fetch(`/order/${currentOrderId}`);
             const data = await res.json();
             
-            const display = document.getElementById('trackerStatus');
-            const previousStatus = display.innerText.toLowerCase();
             const newStatus = data.status;
 
-            if (previousStatus !== newStatus) {
-                display.innerText = newStatus;
+            // NEW LOGIC: Only trigger if the server's status is DIFFERENT from our memory
+            if (newStatus !== lastKnownStatus) {
+                
+                // 1. Update the big orange text
+                document.getElementById('trackerStatus').innerText = newStatus.toUpperCase();
+                
+                // 2. Show the popup ONCE
                 showPopup(`Update: Order is now ${newStatus.toUpperCase()}`);
                 
-                // Stop asking the server once it's delivered
+                // 3. Update the memory so it ignores the timer until the next stage!
+                lastKnownStatus = newStatus;
+
+                // 4. Stop the timer if it's delivered
                 if (newStatus === 'delivered') {
                     clearInterval(trackingInterval);
-                    showPopup("Enjoy your food!");
+                    // Wait 3.5 seconds before saying goodbye so notifications don't overlap
+                    setTimeout(() => showPopup("Enjoy your food!"), 3500);
                 }
             }
         }
