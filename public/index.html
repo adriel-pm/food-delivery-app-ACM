@@ -21,9 +21,15 @@
             <option value="driver">Driver</option>
         </select>
         <button onclick="register()">Create Account</button>
+        <p id="regStatus"></p>
     </div>
 
-    <div id="status"></div>
+    <div class="box">
+        <h3>Track Your Orange Order</h3>
+        <input id="trackId" placeholder="Paste Order ID here">
+        <button onclick="trackOrder()">Refresh Status</button>
+        <p id="statusDisplay" style="font-size: 1.2em; color: #ff6600; font-weight: bold;"></p>
+    </div>
 
     <script>
         async function register() {
@@ -37,7 +43,19 @@
                 body: JSON.stringify({ email, password, role })
             });
             const data = await response.json();
-            document.getElementById('status').innerText = data.message;
+            document.getElementById('regStatus').innerText = data.message;
+        }
+
+        async function trackOrder() {
+            const id = document.getElementById('trackId').value;
+            const response = await fetch(`/order/${id}`);
+            const data = await response.json();
+            
+            if (data.status) {
+                document.getElementById('statusDisplay').innerText = `Current Status: ${data.status.toUpperCase()}`;
+            } else {
+                document.getElementById('statusDisplay').innerText = "Order ID not found.";
+            }
         }
     </script>
 </body>

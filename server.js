@@ -47,12 +47,57 @@ app.post('/order', (req, res) => {
     const newOrder = {
         orderId: `ORDER-${Math.floor(Math.random() * 9999)}`,
         customerId: customerId,
-        status: "preparing", //
+        status: "Preparing", //
         time: new Date()
     };
     
     orders.push(newOrder);
     res.status(201).json(newOrder);
+});
+
+// 3. Update Order Status (Tracking Logic)
+app.patch('/order/:id/status', (req, res) => {
+    const { status } = req.body; // e.g., "ready", "picked up", or "delivered"
+    const order = orders.find(o => o.orderId === req.params.id);
+    
+    if (order) {
+        order.status = status;
+        res.json({ message: `Order updated to ${status}`, order });
+    } else {
+        res.status(404).send("Order ID not found.");
+    }
+});
+
+// 4. Order lifecycle
+app.post('/order', (req, res) => {
+    const { customerId, itemId } = req.body;
+    const orderId = Math.floor(Math.random() * 10000);
+    const newOrder = { orderId, customerId, itemId, status: "preparing" };
+    orders.push(newOrder);
+
+    // Helper to get a random time between 5s and 15s (in milliseconds)
+    const randomTime = () => Math.floor(Math.random() * (15000 - 5000 + 1)) + 5000;
+
+    // --- THE AUTOMATION SEQUENCE ---
+    setTimeout(() => {
+        newOrder.status = "ready";
+        console.log(`Order ${orderId}: READY`);
+
+        setTimeout(() => {
+            newOrder.status = "picked up";
+            console.log(`Order ${orderId}: PICKED UP`);
+
+            setTimeout(() => {
+                newOrder.status = "delivered";
+                console.log(`Order ${orderId}: DELIVERED`);
+            }, randomTime());
+        }, randomTime());
+    }, randomTime());
+
+    res.status(201).json({ 
+        message: "Order placed! It will advance through stages automatically.", 
+        orderId: orderId 
+    });
 });
 
 app.listen(3000, () => console.log("Food Delivery App is ALIVE on port 3000!"));
