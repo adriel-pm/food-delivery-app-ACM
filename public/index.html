@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Syracuse Food Delivery</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .box { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: 0 auto 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
+        input, select, button { display: block; width: 90%; margin: 10px auto; padding: 10px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background: #ff6600; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #e65c00; }
+        .hidden { display: none; }
+        .menu-item { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; text-align: center; cursor: pointer; background: #fff8f0; }
+        .menu-item:hover { background: #ffe0b2; }
+        #popup { background: #333; color: white; padding: 15px; border-radius: 5px; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        .progress { color: #ff6600; font-size: 1.5em; text-transform: uppercase; text-align: center; margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">🍊 Food Delivery Portal</h1>
+
+    <div id="popup" class="hidden"></div>
+
+    <div id="authBox" class="box">
+        <h3 style="text-align: center;">Login or Register</h3>
+        <input id="username" type="text" placeholder="Username">
+        <input id="password" type="password" placeholder="Password">
+        <select id="role">
+            <option value="customer">Customer</option>
+            <option value="driver">Driver</option>
+        </select>
+        <button onclick="handleLogin()">Login</button>
+        <button onclick="handleRegister()" style="background: #444;">Register</button>
+    </div>
+
+    <div id="menuBox" class="box hidden">
+        <h3 style="text-align: center;">Select Your Meal</h3>
+        <div id="menuList"></div>
+    </div>
+
+    <div id="trackBox" class="box hidden">
+        <h3 style="text-align: center;">Live Order Tracker</h3>
+        <p style="text-align: center;">Order ID: <span id="displayOrderId"></span></p>
+        <div id="trackerStatus" class="progress">PREPARING</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <script>
+        // ── Paste your Firebase config here ───────────────────────────────
+        // Firebase Console → Project Settings → Your Apps → SDK setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyCaLmZRvWFMDP80wP9sekoojdt-R5CgYRI",
+            authDomain: "fooddeliveryappacm.firebaseapp.com",
+            projectId: "fooddeliveryappacm",
+            storageBucket: "fooddeliveryappacm.firebasestorage.app",
+            messagingSenderId: "125044558080",
+            appId: "1:125044558080:web:6320d088f03aded764cbe5"
+        };
+
+        // ── Paste your Functions base URL here ────────────────────────────
+        // You'll get this after running: firebase deploy --only functions
+        // It looks like: https://us-central1-YOUR_PROJECT_ID.cloudfunctions.net
+        const FUNCTIONS_BASE = 'https://us-central1-fooddeliveryappacm.cloudfunctions.net';
+        // ─────────────────────────────────────────────────────────────────
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        function toFakeEmail(username) {
+            return `${username.toLowerCase().trim()}@foodapp.local`;
+        }
+
+        let currentOrderId = null;
+        let trackingInterval = null;
+        let lastKnownStatus = 'preparing';
+
+        function showPopup(msg) {
+            const popup = document.getElementById('popup');
+            popup.innerText = msg;
+            popup.classList.remove('hidden');
+            setTimeout(() => popup.classList.add('hidden'), 3000);
+        }
+
+        async function getAuthHeader() {
+            const token = await auth.currentUser.getIdToken();
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            if (!username || !password) { showPopup('Please enter a username and password.'); return; }
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) { showPopup('Username can only contain letters, numbers, and underscores.'); return; }
+
+            try {
+                await auth.createUserWithEmailAndPassword(toFakeEmail(username), password);
+
+                const headers = await getAuthHeader();
+                const res = await fetch(`${FUNCTIONS_BASE}/register`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ username, role })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showPopup('Account Created!');
+                    document.getElementById('authBox').classList.add('hidden');
+                    loadMenu();
+                } else {
+                    await auth.currentUser.delete();
+                    showPopup('Error: ' + data.message);
+                }
+            } catch (err) {
+                if (err.code === 'auth/email-already-in-use') showPopup('Error: Username already taken.');
+                else showPopup('Error: ' + err.message);
+            }
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) { showPopup('Please enter your username and password.'); return; }
+
+            try {
+                await auth.signInWithEmailAndPassword(toFakeEmail(username), password);
+                showPopup('Login Successful!');
+                document.getElementById('authBox').classList.add('hidden');
+                loadMenu();
+            } catch (err) {
+                if (['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(err.code)) {
+                    showPopup('Error: Invalid username or password.');
+                } else {
+                    showPopup('Error: ' + err.message);
+                }
+            }
+        }
+
+        async function loadMenu() {
+            document.getElementById('menuBox').classList.remove('hidden');
+            const headers = await getAuthHeader();
+            const res = await fetch(`${FUNCTIONS_BASE}/menu`, { headers });
+            const menu = await res.json();
+
+            const list = document.getElementById('menuList');
+            list.innerHTML = '';
+            menu.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'menu-item';
+                div.innerHTML = `<strong>${item.name}</strong><br>$${item.price}`;
+                div.onclick = () => placeOrder(item.id);
+                list.appendChild(div);
+            });
+        }
+
+        async function placeOrder(itemId) {
+            const headers = await getAuthHeader();
+            const res = await fetch(`${FUNCTIONS_BASE}/placeOrder`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ itemId })
+            });
+            const data = await res.json();
+
+            showPopup('Order Sent to Kitchen!');
+            document.getElementById('menuBox').classList.add('hidden');
+            document.getElementById('trackBox').classList.remove('hidden');
+            document.getElementById('displayOrderId').innerText = data.orderId;
+
+            currentOrderId = data.orderId;
+            lastKnownStatus = 'preparing';
+            document.getElementById('trackerStatus').innerText = 'PREPARING';
+
+            trackingInterval = setInterval(checkStatus, 2000);
+        }
+
+        async function checkStatus() {
+            const headers = await getAuthHeader();
+            const res = await fetch(`${FUNCTIONS_BASE}/getOrder?id=${currentOrderId}`, { headers });
+            const data = await res.json();
+
+            const newStatus = data.status;
+            if (newStatus !== lastKnownStatus) {
+                document.getElementById('trackerStatus').innerText = newStatus.toUpperCase();
+                showPopup(`Update: Order is now ${newStatus.toUpperCase()}`);
+                lastKnownStatus = newStatus;
+
+                if (newStatus === 'Delivered') {
+                    clearInterval(trackingInterval);
+                    setTimeout(() => showPopup('Enjoy your food!'), 3500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
