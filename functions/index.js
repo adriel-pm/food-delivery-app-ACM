@@ -14,9 +14,9 @@ function getDb() {
     if (!admin.apps.length) {
         admin.initializeApp({
             credential: admin.credential.cert({
-                projectId:   projectId.value(),
-                clientEmail: clientEmail.value(),
-                privateKey:  privateKey.value().replace(/\\n/g, '\n')
+                projectId:   projectId.value().trim(),
+                clientEmail: clientEmail.value().trim(),
+                privateKey:  privateKey.value().replace(/\\n/g, '\n').trim()
             })
         });
     }
@@ -28,12 +28,18 @@ function getDb() {
 async function verifyToken(req, res) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
+        console.error('No auth header found:', authHeader);
         res.status(401).json({ message: 'Unauthorized: No token provided' });
         return null;
     }
     try {
-        return await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    } catch {
+        const token = authHeader.split('Bearer ')[1];
+        console.log('Verifying token:', token.substring(0, 20) + '...');
+        const decoded = await admin.auth().verifyIdToken(token);
+        console.log('Token verified for uid:', decoded.uid);
+        return decoded;
+    } catch (err) {
+        console.error('Token verification failed:', err.message);
         res.status(401).json({ message: 'Unauthorized: Invalid token' });
         return null;
     }
@@ -45,6 +51,7 @@ exports.register = onRequest(
     (req, res) => cors(req, res, async () => {
         if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
+        const firestore = getDb(); // initialize Admin first
         const user = await verifyToken(req, res);
         if (!user) return;
 
@@ -53,7 +60,6 @@ exports.register = onRequest(
             return res.status(400).json({ message: 'Username and role are required.' });
         }
 
-        const firestore = getDb();
         const existing = await firestore.collection('users').where('username', '==', username).get();
         if (!existing.empty) {
             return res.status(409).json({ message: 'Username already taken.' });
@@ -78,12 +84,11 @@ exports.menu = onRequest(
     { secrets: [projectId, clientEmail, privateKey] },
     (req, res) => cors(req, res, async () => {
         if (req.method !== 'GET') return res.status(405).send('Method Not Allowed');
-
+        const firestore = getDb(); // initialize Admin first
         const user = await verifyToken(req, res);
         if (!user) return;
 
         try {
-            const firestore = getDb();
             const snapshot = await firestore.collection('menu').orderBy('name').get();
             if (snapshot.empty) {
                 return res.json([
@@ -104,7 +109,7 @@ exports.placeOrder = onRequest(
     { secrets: [projectId, clientEmail, privateKey] },
     (req, res) => cors(req, res, async () => {
         if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-
+        const firestore = getDb(); // initialize Admin first
         const user = await verifyToken(req, res);
         if (!user) return;
 
@@ -112,7 +117,6 @@ exports.placeOrder = onRequest(
         if (!itemId) return res.status(400).json({ message: 'itemId is required.' });
 
         try {
-            const firestore = getDb();
             const orderRef = await firestore.collection('orders').add({
                 uid: user.uid,
                 itemId,
@@ -143,7 +147,7 @@ exports.getOrder = onRequest(
     { secrets: [projectId, clientEmail, privateKey] },
     (req, res) => cors(req, res, async () => {
         if (req.method !== 'GET') return res.status(405).send('Method Not Allowed');
-
+        const firestore = getDb(); // initialize Admin first
         const user = await verifyToken(req, res);
         if (!user) return;
 
@@ -151,7 +155,6 @@ exports.getOrder = onRequest(
         if (!orderId) return res.status(400).json({ message: 'Order ID is required.' });
 
         try {
-            const firestore = getDb();
             const doc = await firestore.collection('orders').doc(orderId).get();
             if (!doc.exists) return res.status(404).json({ message: 'Order not found.' });
             if (doc.data().uid !== user.uid) return res.status(403).json({ message: 'Forbidden.' });

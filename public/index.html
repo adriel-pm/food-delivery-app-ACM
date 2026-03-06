@@ -96,8 +96,8 @@
             if (!/^[a-zA-Z0-9_]+$/.test(username)) { showPopup('Username can only contain letters, numbers, and underscores.'); return; }
 
             try {
-                await auth.createUserWithEmailAndPassword(toFakeEmail(username), password);
-
+                const userCredential = await auth.createUserWithEmailAndPassword(toFakeEmail(username), password);
+                await userCredential.user.getIdToken(true); // force fresh token
                 const headers = await getAuthHeader();
                 const res = await fetch(`${FUNCTIONS_BASE}/register`, {
                     method: 'POST',
