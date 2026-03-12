@@ -17,7 +17,7 @@
 
     <nav class="sticky top-0 z-50 glass border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-2">
-            <span class="text-2xl font-black tracking-tighter text-orange-600">🍊 SYRACUSE<span class="text-slate-900">EATS</span></span>
+            <a href="/" class="text-2xl font-black tracking-tighter text-orange-600 cursor-pointer hover:opacity-80 transition">🍊 SYRACUSE<span class="text-slate-900">EATS</span></a>
         </div>
         <div id="navControls" class="hidden flex items-center gap-6">
             <button onclick="showHistory()" class="text-sm font-semibold hover:text-orange-600 transition">Order History</button>
@@ -160,13 +160,12 @@
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyCE8lNsjRc5UQqJTWsNX2o8JGLn5xVRojY",
-            authDomain: "food-delivery-app-a33ae.firebaseapp.com",
-            projectId: "food-delivery-app-a33ae",
-            storageBucket: "food-delivery-app-a33ae.firebasestorage.app",
-            messagingSenderId: "703483412880",
-            appId: "1:703483412880:web:6a40666c4aa0d2faa37315",
-            measurementId: "G-VWVBS5B47N"
+            apiKey: "AIzaSyCaLmZRvWFMDP80wP9sekoojdt-R5CgYRI",
+            authDomain: "fooddeliveryappacm.firebaseapp.com",
+            projectId: "fooddeliveryappacm",
+            storageBucket: "fooddeliveryappacm.firebasestorage.app",
+            messagingSenderId: "125044558080",
+            appId: "1:125044558080:web:6320d088f03aded764cbe5"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -238,7 +237,7 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                currentUser = { uid: user.uid, ...userDoc.data() };
+                currentUser = { uid: user.uid, email: user.email, ...userDoc.data() };
                 
                 document.getElementById('navControls').classList.remove('hidden');
                 document.getElementById('userTag').innerText = currentUser.role;
@@ -357,7 +356,7 @@
             updateCartUI();
         };
 
-        function startTracking(id) {
+        window.startTracking = function(id) {
             showScreen('trackerScreen');
             document.getElementById('trackerOrderId').innerText = id.slice(-6).toUpperCase();
             onSnapshot(doc(db, "orders", id), (snap) => {
@@ -478,9 +477,25 @@
                             <div><p class="font-black text-lg text-gray-800">${o.restaurantName}</p><p class="text-xs text-gray-400">${date} at ${time}</p></div>
                             <div class="text-right"><p class="font-bold text-orange-600">$${o.total.toFixed(2)}</p><p class="text-[10px] text-gray-400 uppercase tracking-widest font-mono">ID: ${d.id.slice(-6)}</p></div>
                         </div>
-                        <div class="text-sm text-gray-500 italic space-y-1">${o.items.map(i => `<p>1x ${i.name}</p>`).join('')}</div>
-                    </div>
-                `;
+                        <div class="text-sm text-gray-500 italic space-y-1 mb-3">${o.items.map(i => `<p>1x ${i.name}</p>`).join('')}</div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold uppercase tracking-widest ${
+                                o.status === 'delivered' ? 'text-green-500' :
+                                o.status === 'picked_up' ? 'text-blue-500' :
+                                o.status === 'ready_for_pickup' ? 'text-purple-500' :
+                                o.status === 'preparing' ? 'text-orange-500' :
+                                'text-gray-400'
+                            }">
+                                ${ o.status === 'order_received' ? '📝 Order Received' :
+                                o.status === 'preparing' ? '🍳 Preparing' :
+                                o.status === 'ready_for_pickup' ? '🥡 Ready for Pickup' :
+                                o.status === 'picked_up' ? '🚗 Driver En Route' :
+                                o.status === 'delivered' ? '✓ Delivered' : o.status }
+                            </span>
+                        </div>
+                        <button onclick="closeHistory(); setTimeout(() => startTracking('${d.id}'), 50)" class="mt-3 w-full bg-orange-50 text-orange-600 border border-orange-200 font-bold py-2 rounded-xl hover:bg-orange-100 transition text-sm">📍 Track This Order</button>
+                        </div>
+                        `;
             }).join('') || '<p class="text-center py-10 text-gray-400">No orders yet.</p>';
         };
 
