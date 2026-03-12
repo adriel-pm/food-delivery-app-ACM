@@ -1,143 +1,492 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Syracuse Food Delivery</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syracuse Eats | Premium Delivery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
-        .box { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: 0 auto 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
-        input, select, button { display: block; width: 90%; margin: 10px auto; padding: 10px; border-radius: 5px; border: 1px solid #ccc;}
-        button { background: #ff6600; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #e65c00; }
-        .hidden { display: none; }
-        .menu-item { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; text-align: center; cursor: pointer; background: #fff8f0; }
-        .menu-item:hover { background: #ffe0b2; }
-        #popup { background: #333; color: white; padding: 15px; border-radius: 5px; text-align: center; margin-bottom: 15px; font-weight: bold; }
-        .progress { color: #ff6600; font-size: 1.5em; text-transform: uppercase; text-align: center; margin-top: 20px; font-weight: bold;}
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .hidden { display: none !important; }
+        .orange-gradient { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
     </style>
 </head>
-<body>
-    <h1 style="text-align: center;">🍊 Food Delivery Portal</h1>
+<body class="bg-gray-50 text-slate-900 min-h-screen">
 
-    <div id="popup" class="hidden"></div>
+    <nav class="sticky top-0 z-50 glass border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl font-black tracking-tighter text-orange-600">🍊 SYRACUSE<span class="text-slate-900">EATS</span></span>
+        </div>
+        <div id="navControls" class="hidden flex items-center gap-6">
+            <button onclick="showHistory()" class="text-sm font-semibold hover:text-orange-600 transition">Order History</button>
+            <div id="userTag" class="px-4 py-1.5 rounded-full bg-slate-100 text-xs font-bold uppercase tracking-wider"></div>
+            <button onclick="logout()" class="text-sm font-bold text-red-500">Log Out</button>
+        </div>
+    </nav>
 
-    <div id="authBox" class="box">
-        <h3 style="text-align: center;">Login or Register</h3>
-        <input id="email" placeholder="Email">
-        <input id="password" type="password" placeholder="Password">
-        <select id="role"><option value="customer">Customer</option><option value="driver">Driver</option></select>
-        <button onclick="authenticate('/login')">Login</button>
-        <button onclick="authenticate('/register')" style="background: #444;">Register</button>
+    <main id="authScreen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-3xl shadow-2xl border border-gray-100">
+        <h2 id="authTitle" class="text-3xl font-extrabold mb-2 text-center">Welcome Back</h2>
+        <p id="authSub" class="text-gray-500 text-center mb-8">Sign in to start ordering</p>
+        
+        <div class="space-y-4">
+            <input id="email" type="email" placeholder="Email Address" class="w-full p-4 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-orange-500 outline-none transition">
+            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-orange-500 outline-none transition">
+            
+            <div id="registerFields" class="hidden space-y-4">
+                <select id="regRole" class="w-full p-4 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 outline-none">
+                    <option value="customer">I am a Customer</option>
+                    <option value="driver">I am a Driver</option>
+                </select>
+            </div>
+
+            <button id="mainAuthBtn" onclick="handleAuth()" class="w-full orange-gradient text-white font-extrabold py-4 rounded-2xl shadow-lg shadow-orange-200 hover:scale-[1.02] transition active:scale-95">Sign In</button>
+            <button id="toggleAuthBtn" onclick="toggleAuthMode()" class="w-full text-sm font-bold text-gray-400 hover:text-slate-800 transition">Don't have an account? Register</button>
+        </div>
+    </main>
+
+    <main id="restaurantSelect" class="hidden max-w-6xl mx-auto p-6">
+        <h2 class="text-4xl font-extrabold mb-8">What are you craving?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div onclick="enterRestaurant('mcdonalds')" class="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition">
+                <div class="h-48 bg-cover bg-center" style="background-image: url('https://www.foodandwine.com/thmb/zaL9eyOyTgCjX99DFOhB3iG7YEk=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/The-Worst-Time-to-Visit-McDonalds-FT-BLOG0823-711a27313d1a448baf4db4817310ff5d.jpg')"></div>
+                <div class="p-6"><h3 class="text-2xl font-bold group-hover:text-orange-600">McDonald's</h3><p class="text-gray-500 text-sm">Burgers • Fries • Fast Food</p></div>
+            </div>
+            <div onclick="enterRestaurant('dominos')" class="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition">
+                <div class="h-48 bg-cover bg-center" style="background-image: url('https://www.dominos.com/cms/assets/faf92642-e9a4-4819-b5be-a45c739b7cc3?im=Crop,rect=(78,770,3993,1191);Resize=(1700),allowExpansion')"></div>
+                <div class="p-6"><h3 class="text-2xl font-bold group-hover:text-orange-600">Domino's</h3><p class="text-gray-500 text-sm">Pizza • Wings • Italian</p></div>
+            </div>
+            <div onclick="enterRestaurant('subway')" class="group cursor-pointer bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition">
+                <div class="h-48 bg-cover bg-center" style="background-image: url('https://mma.prnewswire.com/media/2769047/Subway_Fresh_Fit.jpg?w=2700')"></div>
+                <div class="p-6"><h3 class="text-2xl font-bold group-hover:text-orange-600">Subway</h3><p class="text-gray-500 text-sm">Sandwiches • Salads • Healthy</p></div>
+            </div>
+        </div>
+    </main>
+
+    <main id="customerScreen" class="hidden max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div class="lg:col-span-2">
+            <button onclick="promptLeaveRestaurant()" class="mb-4 text-orange-600 font-bold flex items-center gap-2 hover:text-orange-800 transition">← Change Restaurant</button>
+            <h2 id="currentStoreTitle" class="text-4xl font-extrabold mb-8">Menu</h2>
+            <div id="menuGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        </div>
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-3xl shadow-xl p-8 sticky top-28 border border-gray-100">
+                <h3 class="text-2xl font-extrabold mb-6 flex justify-between items-center">Your Cart <span id="cartCount" class="text-sm bg-orange-100 text-orange-600 px-3 py-1 rounded-full">0 items</span></h3>
+                <div id="cartItems" class="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2"></div>
+                
+                <div class="border-t pt-4 space-y-3">
+                    <div class="flex justify-between text-sm text-gray-500"><span>Subtotal</span><span id="cartSubtotal">$0.00</span></div>
+                    <div class="flex justify-between text-sm text-gray-500"><span>Tax (8%)</span><span id="cartTax">$0.00</span></div>
+                    <div class="flex justify-between text-sm text-gray-500"><span>App Fee</span><span id="cartFee">$0.00</span></div>
+                    <div class="flex justify-between font-black text-2xl pt-2 border-t"><span>Total</span><span id="cartTotal">$0.00</span></div>
+                </div>
+
+                <button onclick="placeOrder()" class="w-full mt-8 orange-gradient text-white font-bold py-4 rounded-2xl shadow-lg hover:scale-[1.02] transition">Checkout Now</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="leaveWarningModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="cancelLeave()"></div>
+        <div class="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-8 text-center">
+            <div class="text-5xl mb-4">🛒</div>
+            <h3 class="text-2xl font-black mb-2">Clear your cart?</h3>
+            <p class="text-gray-500 mb-8">You have items in your cart. If you switch restaurants now, your current cart will be emptied.</p>
+            <div class="space-y-3">
+                <button onclick="confirmLeave()" class="w-full bg-red-500 text-white font-bold py-3 rounded-xl hover:bg-red-600 transition">Clear Cart & Leave</button>
+                <button onclick="cancelLeave()" class="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-200 transition">Cancel, Keep Ordering</button>
+            </div>
+        </div>
     </div>
 
-    <div id="menuBox" class="box hidden">
-        <h3 style="text-align: center;">Select Your Meal</h3>
-        <div id="menuList"></div>
-    </div>
+    <main id="historyScreen" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeHistory()"></div>
+        <div class="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                <h2 class="text-2xl font-black">Order History</h2>
+                <button onclick="closeHistory()" class="text-gray-400 hover:text-black">✕ Close</button>
+            </div>
+            <div id="historyList" class="p-6 overflow-y-auto space-y-4 bg-gray-50 flex-grow"></div>
+        </div>
+    </main>
 
-    <div id="trackBox" class="box hidden">
-        <h3 style="text-align: center;">Live Order Tracker</h3>
-        <p style="text-align: center;">Order ID: <span id="displayOrderId"></span></p>
-        <div id="trackerStatus" class="progress">PREPARING</div>
-    </div>
+    <main id="kitchenScreen" class="hidden max-w-7xl mx-auto p-6">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-4xl font-extrabold">Kitchen Operations</h2>
+            <div id="kitchenBrand" class="px-6 py-2 bg-black text-white rounded-full font-bold uppercase tracking-widest text-sm"></div>
+        </div>
+        <div id="kitchenOrders" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+    </main>
 
-    <script>
-        let currentOrderId = null;
-        let trackingInterval = null;
-        // NEW: This gives the app a memory so it doesn't spam notifications
-        let lastKnownStatus = "preparing"; 
+    <main id="driverScreen" class="hidden max-w-7xl mx-auto p-6">
+        <h2 class="text-4xl font-extrabold mb-8">Driver Radar 📡</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div>
+                <h3 class="text-xl font-bold mb-4 text-gray-500 uppercase tracking-widest">Available Pickups</h3>
+                <div id="driverRadar" class="space-y-4"></div>
+            </div>
+            <div id="activeDeliveryBox" class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                <p class="text-gray-400 font-bold">No active delivery.</p>
+            </div>
+        </div>
+    </main>
 
-        // Show a temporary popup message
-        function showPopup(msg) {
-            const popup = document.getElementById('popup');
-            popup.innerText = msg;
-            popup.classList.remove('hidden');
-            setTimeout(() => popup.classList.add('hidden'), 3000);
-        }
+    <main id="trackerScreen" class="hidden max-w-3xl mx-auto mt-20 p-10 bg-white rounded-[3rem] shadow-2xl text-center border">
+        <div class="mb-8">
+            <div class="inline-block p-4 bg-orange-50 rounded-full mb-4">
+                <span id="trackerEmoji" class="text-5xl">📝</span>
+            </div>
+            <h2 id="trackerStatusText" class="text-4xl font-black uppercase tracking-tight">Order Received...</h2>
+            <p class="text-gray-400 mt-2">Order #<span id="trackerOrderId">---</span></p>
+        </div>
+        <div class="relative w-full h-4 bg-gray-100 rounded-full overflow-hidden mb-8">
+            <div id="trackerProgress" class="absolute top-0 left-0 h-full orange-gradient transition-all duration-1000 w-1/5"></div>
+        </div>
+        
+        <div class="bg-gray-50 p-6 rounded-2xl border border-gray-100 text-left max-w-md mx-auto shadow-inner">
+            <h3 class="font-bold text-lg mb-4 border-b pb-2 text-gray-800">Virtual Receipt</h3>
+            <div id="trackerReceipt" class="space-y-2 mb-4 text-sm text-gray-600"></div>
+            <div class="border-t border-gray-200 pt-3 font-black text-lg flex justify-between text-gray-900">
+                <span>Total Paid:</span>
+                <span id="trackerTotal"></span>
+            </div>
+        </div>
+    </main>
 
-        async function authenticate(route) {
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCE8lNsjRc5UQqJTWsNX2o8JGLn5xVRojY",
+            authDomain: "food-delivery-app-a33ae.firebaseapp.com",
+            projectId: "food-delivery-app-a33ae",
+            storageBucket: "food-delivery-app-a33ae.firebasestorage.app",
+            messagingSenderId: "703483412880",
+            appId: "1:703483412880:web:6a40666c4aa0d2faa37315",
+            measurementId: "G-VWVBS5B47N"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const restaurants = {
+            mcdonalds: { 
+                name: "McDonald's", 
+                kitchenEmail: "mcdonalds@email.com",
+                menu: [
+                    { name: "Big Mac", price: 8.99, img: "https://s7d1.scene7.com/is/image/mcdonalds/DC_202309_4282_QuarterPounderCheeseDeluxe_Shredded_1564x1564-1:nutrition-calculator-tile?resmode=sharp2" },
+                    { name: "Large Fries", price: 3.49, img: "https://s7d1.scene7.com/is/image/mcdonalds/DC_202002_6053_LargeFries_1564x1564-1:nutrition-calculator-tile?resmode=sharp2" },
+                    { name: "Vanilla Milkshake", price: 4.50, img: "https://s7d1.scene7.com/is/image/mcdonalds/DC_201907_1598_MediumVanillaShake_Glass_A1_1564x1564-1:product-header-mobile?wid=1313&hei=1313&dpr=off" },
+                    { name: "McFlurry", price: 3.99, img: "https://s7d1.scene7.com/is/image/mcdonalds/mcdonalds-oreo-mcflurry-March-New-promo:nutrition-calculator-tile?wid=822&hei=822&dpr=off" }
+                ]
+            },
+            dominos: {
+                name: "Domino's",
+                kitchenEmail: "dominos@email.com",
+                menu: [
+                    { name: "Pepperoni Pizza", price: 14.99, img: "https://assets.simpleviewinc.com/simpleview/image/upload/c_limit,q_75,w_1200/v1/crm/palmspringsca/DominosPizza1_0247C5A4-F607-3938-22358455D723F0B1-0247c214f0090cf_0247d470-adf3-ad66-ea97e999303fdf0c.jpg" },
+                    { name: "Garlic Knots", price: 6.99, img: "https://foodovercomfort.com/wp-content/uploads/2024/04/dominos-parmesan-bread-bites-recipe.jpg" },
+                    { name: "BBQ Wings", price: 12.50, img: "https://www.hungryhowies.com/sites/default/files/2025-07/HH_Menu_BBQ_Howie_Wings_685x4602.png" },
+                    { name: "Choco Lava Cake", price: 5.99, img: "https://www.dominos.com.au/ManagedAssets/AU/product/S00067/AU_S00067_en_hero_3951.png?v-835097886" }
+                ]
+            },
+            subway: {
+                name: "Subway",
+                kitchenEmail: "subway@email.com",
+                menu: [
+                    { name: "Footlong Italian", price: 11.99, img: "https://www.qsrmagazine.com/wp-content/uploads/2022/03/subwayitalian.jpg" },
+                    { name: "Turkey Club", price: 9.99, img: "https://www.qsrmagazine.com/wp-content/uploads/2022/01/subwaybajaturkeyavocado.jpg" },
+                    { name: "Veggie Salad", price: 8.50, img: "https://www.subway.com.my/images/menu/salad/Salad%20Veggie%20Delite.png" },
+                    { name: "Subway Cookie", price: 1.50, img: "https://subwayisfresh.com.sg/wp-content/uploads/2022/02/Sides-Chocolate-chip.jpg" }
+                ]
+            }
+        };
+
+        let currentUser = null;
+        let cart = [];
+        let activeRestaurant = null;
+        let isRegistering = false;
+
+        window.toggleAuthMode = () => {
+            isRegistering = !isRegistering;
+            document.getElementById('authTitle').innerText = isRegistering ? "Create Account" : "Welcome Back";
+            document.getElementById('authSub').innerText = isRegistering ? "Join the Syracuse Eats fleet" : "Sign in to start ordering";
+            document.getElementById('mainAuthBtn').innerText = isRegistering ? "Register" : "Sign In";
+            document.getElementById('toggleAuthBtn').innerText = isRegistering ? "Already have an account? Sign In" : "Don't have an account? Register";
+            document.getElementById('registerFields').classList.toggle('hidden', !isRegistering);
+        };
+
+        window.handleAuth = async () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const role = document.getElementById('role').value;
 
-            const res = await fetch(route, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, role })
-            });
-            const data = await res.json();
-            
-            if (res.ok) {
-                showPopup(data.message);
-                document.getElementById('authBox').classList.add('hidden');
-                loadMenu(); 
-            } else {
-                showPopup("Error: " + data.message);
-            }
-        }
-
-        async function loadMenu() {
-            document.getElementById('menuBox').classList.remove('hidden');
-            const res = await fetch('/menu');
-            const menu = await res.json();
-            
-            const list = document.getElementById('menuList');
-            list.innerHTML = '';
-            menu.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'menu-item';
-                div.innerHTML = `<strong>${item.name}</strong><br>$${item.price}`;
-                div.onclick = () => placeOrder(item.id);
-                list.appendChild(div);
-            });
-        }
-
-        async function placeOrder(itemId) {
-            const res = await fetch('/order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemId })
-            });
-            const data = await res.json();
-            
-            showPopup("Order Sent to Kitchen!");
-            document.getElementById('menuBox').classList.add('hidden');
-            document.getElementById('trackBox').classList.remove('hidden');
-            document.getElementById('displayOrderId').innerText = data.orderId;
-            
-            // Reset the memory and UI for a brand new order
-            currentOrderId = data.orderId;
-            lastKnownStatus = "preparing"; 
-            document.getElementById('trackerStatus').innerText = "PREPARING";
-            
-            trackingInterval = setInterval(checkStatus, 2000); 
-        }
-
-        async function checkStatus() {
-            const res = await fetch(`/order/${currentOrderId}`);
-            const data = await res.json();
-            
-            const newStatus = data.status;
-
-            // NEW LOGIC: Only trigger if the server's status is DIFFERENT from our memory
-            if (newStatus !== lastKnownStatus) {
-                
-                // 1. Update the big orange text
-                document.getElementById('trackerStatus').innerText = newStatus.toUpperCase();
-                
-                // 2. Show the popup ONCE
-                showPopup(`Update: Order is now ${newStatus.toUpperCase()}`);
-                
-                // 3. Update the memory so it ignores the timer until the next stage!
-                lastKnownStatus = newStatus;
-
-                // 4. Stop the timer if it's delivered
-                if (newStatus === 'delivered') {
-                    clearInterval(trackingInterval);
-                    // Wait 3.5 seconds before saying goodbye so notifications don't overlap
-                    setTimeout(() => showPopup("Enjoy your food!"), 3500);
+            try {
+                if (isRegistering) {
+                    const role = document.getElementById('regRole').value;
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+                    await setDoc(doc(db, "users", cred.user.uid), { email, role });
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
                 }
+            } catch (err) { alert(err.message); }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                currentUser = { uid: user.uid, ...userDoc.data() };
+                
+                document.getElementById('navControls').classList.remove('hidden');
+                document.getElementById('userTag').innerText = currentUser.role;
+                
+                if (currentUser.role === 'customer') showScreen('restaurantSelect');
+                else if (currentUser.role === 'driver') initDriverRadar();
+                else if (currentUser.role === 'restaurant') initKitchenKDS();
+            } else {
+                showScreen('authScreen');
+                document.getElementById('navControls').classList.add('hidden');
             }
+        });
+
+        window.showScreen = (id) => {
+            ['authScreen', 'restaurantSelect', 'customerScreen', 'trackerScreen', 'kitchenScreen', 'driverScreen', 'historyScreen'].forEach(s => {
+                document.getElementById(s).classList.add('hidden');
+            });
+            document.getElementById(id).classList.remove('hidden');
+        };
+
+        // --- NEW CUSTOM MODAL LOGIC ---
+        window.promptLeaveRestaurant = () => {
+            if (cart.length > 0) {
+                document.getElementById('leaveWarningModal').classList.remove('hidden');
+            } else {
+                showScreen('restaurantSelect');
+            }
+        };
+
+        window.cancelLeave = () => {
+            document.getElementById('leaveWarningModal').classList.add('hidden');
+        };
+
+        window.confirmLeave = () => {
+            cart = [];
+            updateCartUI();
+            document.getElementById('leaveWarningModal').classList.add('hidden');
+            showScreen('restaurantSelect');
+        };
+
+        window.enterRestaurant = (id) => {
+            activeRestaurant = id;
+            document.getElementById('currentStoreTitle').innerText = restaurants[id].name;
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = restaurants[id].menu.map(item => `
+                <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden group">
+                    <img src="${item.img}" class="h-44 w-full object-cover">
+                    <div class="p-5 flex justify-between items-center">
+                        <div><h4 class="font-bold text-lg">${item.name}</h4><p class="text-orange-600 font-black">$${item.price.toFixed(2)}</p></div>
+                        <button onclick="addToCart('${item.name}', ${item.price})" class="bg-gray-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-orange-600 transition">+</button>
+                    </div>
+                </div>
+            `).join('');
+            showScreen('customerScreen');
+        };
+
+        window.addToCart = (name, price) => {
+            cart.push({ name, price });
+            updateCartUI();
+        };
+
+        window.removeFromCart = (index) => {
+            cart.splice(index, 1);
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            const list = document.getElementById('cartItems');
+            const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+            
+            // NEW MATH LOGIC
+            const tax = subtotal * 0.08;
+            const fee = cart.length > 0 ? 2.99 : 0;
+            const total = subtotal + tax + fee;
+
+            list.innerHTML = cart.map((item, i) => `
+                <div class="flex justify-between items-center text-sm">
+                    <span class="font-semibold">${item.name}</span>
+                    <div class="flex gap-4 items-center text-gray-400">
+                        <span>$${item.price.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${i})" class="text-red-400 hover:text-red-600 text-lg font-bold">✕</button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-gray-400 text-center py-4 italic">Hungry? Add some food!</p>';
+            
+            document.getElementById('cartCount').innerText = `${cart.length} items`;
+            document.getElementById('cartSubtotal').innerText = `$${subtotal.toFixed(2)}`;
+            document.getElementById('cartTax').innerText = `$${tax.toFixed(2)}`;
+            document.getElementById('cartFee').innerText = `$${fee.toFixed(2)}`;
+            document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
         }
+
+        window.placeOrder = async () => {
+            if (!cart.length) return;
+            
+            // ENSURE PROPER TOTAL IS SAVED
+            const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+            const total = subtotal + (subtotal * 0.08) + 2.99;
+
+            const orderData = {
+                customerId: currentUser.uid,
+                customerEmail: currentUser.email,
+                restaurantId: activeRestaurant,
+                restaurantName: restaurants[activeRestaurant].name,
+                items: cart,
+                total: total,
+                driverPay: (total * 0.15 + 3.00), 
+                status: 'order_received',
+                createdAt: new Date().toISOString()
+            };
+
+            const docRef = await addDoc(collection(db, "orders"), orderData);
+            startTracking(docRef.id);
+            
+            cart = []; 
+            updateCartUI();
+        };
+
+        function startTracking(id) {
+            showScreen('trackerScreen');
+            document.getElementById('trackerOrderId').innerText = id.slice(-6).toUpperCase();
+            onSnapshot(doc(db, "orders", id), (snap) => {
+                const order = snap.data();
+                const prog = document.getElementById('trackerProgress');
+                const text = document.getElementById('trackerStatusText');
+                const emoji = document.getElementById('trackerEmoji');
+
+                document.getElementById('trackerReceipt').innerHTML = order.items.map(i => `<div class="flex justify-between border-b border-gray-100 pb-1"><span>1x ${i.name}</span><span class="font-semibold">$${i.price.toFixed(2)}</span></div>`).join('');
+                document.getElementById('trackerTotal').innerText = `$${order.total.toFixed(2)}`;
+
+                if (order.status === 'order_received') { prog.style.width = '20%'; text.innerText = 'Order Received'; emoji.innerText = '📝'; }
+                if (order.status === 'preparing') { prog.style.width = '40%'; text.innerText = 'Preparing Food'; emoji.innerText = '🍳'; }
+                if (order.status === 'ready_for_pickup') { prog.style.width = '60%'; text.innerText = 'Ready for Pickup'; emoji.innerText = '🥡'; }
+                if (order.status === 'picked_up') { prog.style.width = '80%'; text.innerText = 'Driver is En Route'; emoji.innerText = '🚗'; }
+                if (order.status === 'delivered') { 
+                    prog.style.width = '100%'; text.innerText = 'Delivered! Enjoy!'; emoji.innerText = '😋';
+                    setTimeout(() => showScreen('restaurantSelect'), 8000); 
+                }
+            });
+        }
+
+        function initKitchenKDS() {
+            showScreen('kitchenScreen');
+            let q; 
+
+            if (currentUser.email === 'kitchen@email.com') {
+                document.getElementById('kitchenBrand').innerText = "UNIVERSAL KITCHEN (ALL ORDERS)";
+                q = query(collection(db, "orders")); 
+            } else {
+                let brand = 'mcdonalds';
+                if (currentUser.email.includes('dominos')) brand = 'dominos';
+                if (currentUser.email.includes('subway')) brand = 'subway';
+                document.getElementById('kitchenBrand').innerText = restaurants[brand].name;
+                q = query(collection(db, "orders"), where("restaurantId", "==", brand)); 
+            }
+
+            onSnapshot(q, (snap) => {
+                const activeOrders = snap.docs.filter(d => {
+                    const status = d.data().status;
+                    return status === "order_received" || status === "preparing";
+                });
+
+                document.getElementById('kitchenOrders').innerHTML = activeOrders.map(d => {
+                    const o = d.data();
+                    
+                    const actionBtn = o.status === 'order_received' 
+                        ? `<button onclick="updateStatus('${d.id}', 'preparing')" class="w-full bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow">Accept Order</button>`
+                        : `<button onclick="updateStatus('${d.id}', 'ready_for_pickup')" class="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition shadow">Mark as Ready</button>`;
+
+                    return `
+                        <div class="bg-white p-6 rounded-3xl shadow-xl border-t-8 ${o.status === 'order_received' ? 'border-red-500' : 'border-orange-500'}">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="font-black text-gray-400 text-xs tracking-widest uppercase">Order #${d.id.slice(-6)}</h4>
+                                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">${o.restaurantName}</span>
+                            </div>
+                            <div class="mb-4 text-xs font-bold ${o.status === 'order_received' ? 'text-red-500' : 'text-orange-500'}">${o.status === 'order_received' ? 'NEEDS ACCEPTANCE' : 'PREPARING FOOD...'}</div>
+                            <div class="space-y-2 mb-6">${o.items.map(i => `<p class="font-bold flex justify-between"><span>${i.name}</span> <span class="text-gray-300">x1</span></p>`).join('')}</div>
+                            ${actionBtn}
+                        </div>
+                    `;
+                }).join('') || '<div class="col-span-3 text-center py-20 text-gray-400">All orders complete. Relax!</div>';
+            });
+        }
+
+        function initDriverRadar() {
+            showScreen('driverScreen');
+            const q = query(collection(db, "orders"), where("status", "==", "ready_for_pickup"));
+            onSnapshot(q, (snap) => {
+                document.getElementById('driverRadar').innerHTML = snap.docs.map(d => {
+                    const o = d.data();
+                    return `
+                        <div class="bg-white p-6 rounded-3xl shadow-lg flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-lg">${o.restaurantName}</h4>
+                                <p class="text-green-600 font-black text-xl">Earn: $${o.driverPay.toFixed(2)}</p>
+                            </div>
+                            <button onclick="claimOrder('${d.id}')" class="orange-gradient text-white px-6 py-3 rounded-2xl font-black">Accept Delivery</button>
+                        </div>
+                    `;
+                }).join('') || '<p class="text-gray-400">Searching for orders...</p>';
+            });
+        }
+
+        window.claimOrder = async (id) => {
+            await updateDoc(doc(db, "orders", id), { status: 'picked_up', driverEmail: currentUser.email });
+            document.getElementById('activeDeliveryBox').innerHTML = `
+                <div class="w-full">
+                    <p class="text-orange-600 font-black mb-2">PICKED UP</p>
+                    <h3 class="text-2xl font-bold mb-4">Deliver to Customer</h3>
+                    <button onclick="updateStatus('${id}', 'delivered')" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black hover:bg-green-600 transition shadow">Mark Delivered</button>
+                </div>
+            `;
+        };
+
+        window.updateStatus = async (id, status) => {
+            await updateDoc(doc(db, "orders", id), { 
+                status: status,
+                deliveredAt: status === 'delivered' ? new Date().toISOString() : null
+            });
+            if (status === 'delivered') document.getElementById('activeDeliveryBox').innerHTML = `<p class="text-gray-400 font-bold">No active delivery.</p>`;
+        };
+
+        window.showHistory = async () => {
+            document.getElementById('historyScreen').classList.remove('hidden');
+            const q = query(collection(db, "orders"), where("customerId", "==", currentUser.uid));
+            const snap = await getDocs(q);
+            
+            const sortedDocs = snap.docs.sort((a, b) => new Date(b.data().createdAt) - new Date(a.data().createdAt));
+
+            document.getElementById('historyList').innerHTML = sortedDocs.map(d => {
+                const o = d.data();
+                const date = new Date(o.createdAt).toLocaleDateString();
+                const time = new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return `
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                        <div class="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
+                            <div><p class="font-black text-lg text-gray-800">${o.restaurantName}</p><p class="text-xs text-gray-400">${date} at ${time}</p></div>
+                            <div class="text-right"><p class="font-bold text-orange-600">$${o.total.toFixed(2)}</p><p class="text-[10px] text-gray-400 uppercase tracking-widest font-mono">ID: ${d.id.slice(-6)}</p></div>
+                        </div>
+                        <div class="text-sm text-gray-500 italic space-y-1">${o.items.map(i => `<p>1x ${i.name}</p>`).join('')}</div>
+                    </div>
+                `;
+            }).join('') || '<p class="text-center py-10 text-gray-400">No orders yet.</p>';
+        };
+
+        window.closeHistory = () => document.getElementById('historyScreen').classList.add('hidden');
+        window.logout = () => { signOut(auth); location.reload(); };
+
     </script>
 </body>
 </html>
