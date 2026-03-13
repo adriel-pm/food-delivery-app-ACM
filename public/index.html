@@ -126,8 +126,9 @@
                 <h3 class="text-xl font-bold mb-4 text-gray-500 uppercase tracking-widest">Available Pickups</h3>
                 <div id="driverRadar" class="space-y-4"></div>
             </div>
-            <div id="activeDeliveryBox" class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                <p class="text-gray-400 font-bold">No active delivery.</p>
+            <div id="activeDeliveryBox" class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-dashed border-gray-200 flex flex-col gap-4 min-h-[200px]">
+                <p class="text-gray-400 font-bold text-center">No active delivery.</p>
+            </div>
             </div>
         </div>
     </main>
@@ -160,12 +161,12 @@
         import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyCaLmZRvWFMDP80wP9sekoojdt-R5CgYRI",
-            authDomain: "fooddeliveryappacm.firebaseapp.com",
-            projectId: "fooddeliveryappacm",
-            storageBucket: "fooddeliveryappacm.firebasestorage.app",
-            messagingSenderId: "125044558080",
-            appId: "1:125044558080:web:6320d088f03aded764cbe5"
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
         };
 
         const app = initializeApp(firebaseConfig);
@@ -422,8 +423,30 @@
             });
         }
 
-        function initDriverRadar() {
+        async function initDriverRadar() {
             showScreen('driverScreen');
+            const pickedUpQuery = query(
+                collection(db, "orders"), 
+                where("status", "==", "picked_up"),
+                where("driverEmail", "==", currentUser.email)
+            );
+            const pickedUpSnap = await getDocs(pickedUpQuery);
+            const box = document.getElementById('activeDeliveryBox');
+
+            pickedUpSnap.docs.forEach(d => {
+                const placeholder = box.querySelector('p.text-gray-400.font-bold');
+                if (placeholder) placeholder.remove();
+
+                const card = document.createElement('div');
+                card.id = `delivery-${d.id}`;
+                card.className = 'w-full bg-white p-6 rounded-3xl shadow-lg border border-gray-200 mb-4';
+                card.innerHTML = `
+                    <p class="text-orange-600 font-black mb-1">PICKED UP</p>
+                    <span class="block text-xs text-gray-400 font-mono mb-4">Order #${d.id.slice(-6).toUpperCase()}</span>
+                    <button onclick="completeDelivery('${d.id}')" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black hover:bg-green-600 transition shadow">Mark Delivered</button>
+                `;
+                box.appendChild(card);
+            });
             const q = query(collection(db, "orders"), where("status", "==", "ready_for_pickup"));
             onSnapshot(q, (snap) => {
                 document.getElementById('driverRadar').innerHTML = snap.docs.map(d => {
@@ -443,21 +466,47 @@
 
         window.claimOrder = async (id) => {
             await updateDoc(doc(db, "orders", id), { status: 'picked_up', driverEmail: currentUser.email });
-            document.getElementById('activeDeliveryBox').innerHTML = `
-                <div class="w-full">
-                    <p class="text-orange-600 font-black mb-2">PICKED UP</p>
-                    <h3 class="text-2xl font-bold mb-4">Deliver to Customer</h3>
-                    <button onclick="updateStatus('${id}', 'delivered')" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black hover:bg-green-600 transition shadow">Mark Delivered</button>
-                </div>
+            
+            const box = document.getElementById('activeDeliveryBox');
+            
+            // clear the no active delivery placeholder if it's there
+            const placeholder = box.querySelector('p.text-gray-400.font-bold');
+            if (placeholder) placeholder.remove();
+
+            // make a new card for this order instead of overwriting
+            const card = document.createElement('div');
+            card.id = `delivery-${id}`;
+            card.className = 'w-full bg-white p-6 rounded-3xl shadow-lg border border-gray-200 mb-4';
+            card.innerHTML = `
+                <p class="text-orange-600 font-black mb-1">PICKED UP</p>
+                <span class="block text-xs text-gray-400 font-mono mb-4">Order #${id.slice(-6).toUpperCase()}</span>
+                <button onclick="completeDelivery('${id}')" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black hover:bg-green-600 transition shadow">Mark Delivered</button>
             `;
+            box.appendChild(card);
         };
 
+        window.completeDelivery = async (id) => {
+            await updateDoc(doc(db, "orders", id), {
+                status: 'delivered',
+                deliveredAt: new Date().toISOString()
+            });
+            
+            // Remove just this order's card
+            const card = document.getElementById(`delivery-${id}`);
+            if (card) card.remove();
+            
+            // If no more active deliveries, show the placeholder
+            const box = document.getElementById('activeDeliveryBox');
+            if (box.children.length === 0) {
+                box.innerHTML = '<p class="text-gray-400 font-bold">No active delivery.</p>';
+            }
+        };
+        
         window.updateStatus = async (id, status) => {
             await updateDoc(doc(db, "orders", id), { 
                 status: status,
                 deliveredAt: status === 'delivered' ? new Date().toISOString() : null
             });
-            if (status === 'delivered') document.getElementById('activeDeliveryBox').innerHTML = `<p class="text-gray-400 font-bold">No active delivery.</p>`;
         };
 
         window.showHistory = async () => {
